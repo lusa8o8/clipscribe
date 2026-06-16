@@ -27,6 +27,7 @@ object TranscriptionStateHolder {
 
     fun updateEngineMode() {
         _engineMode.value = when {
+            RemoteTranscriptionConfig.isEnabled() -> TranscriptionEngineMode.REMOTE_ENDPOINT
             WhisperNativeBridge.isLibraryLoaded() -> TranscriptionEngineMode.NATIVE_WHISPER
             isDebugStubEnabled() -> TranscriptionEngineMode.DEBUG_STUB
             else -> TranscriptionEngineMode.NOT_AVAILABLE

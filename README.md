@@ -37,6 +37,8 @@ Useful scripts:
 - `.\scripts\install-debug.ps1`
 - `.\scripts\logcat-clipscribe.ps1`
 - `.\scripts\pull-app-debug-log.ps1`
+- `.\scripts\test-android-integration.ps1`
+- `.\scripts\test-worker.ps1`
 
 Build and install:
 
@@ -83,6 +85,40 @@ Current debug logging covers:
 - Capture service startup
 - AudioRecord startup
 - MediaProjection shutdown
+
+## Cloud endpoint scaffold
+
+This repo now includes a direct Cloudflare Worker scaffold under `cloudflare-worker/`.
+
+Current contract:
+
+- App sends raw WAV bytes as the request body
+- App sends Firebase ID token as `Authorization: Bearer <token>`
+- Worker returns transcript text as plain text
+- Worker may return `X-ClipScribe-Transcription-Duration-Ms` when available
+
+Current provider modes:
+
+- `mock`: local development and contract testing
+- `cloudflare-binding`: intended for a real Workers AI binding
+
+The Android app will only use the remote path when `TRANSCRIPTION_ENDPOINT_URL` is set in the environment at build time.
+
+## Focused integration tests
+
+Instead of running the full test surface for every backend change, use the targeted business-path checks:
+
+```powershell
+.\scripts\test-android-integration.ps1
+.\scripts\test-worker.ps1
+```
+
+These currently cover:
+
+- prepared audio + Firebase token -> remote request contract
+- remote success response -> transcript mapping
+- auth failure -> user-facing auth error path
+- worker request validation and success/error HTTP behavior
 
 ## Architecture notes
 

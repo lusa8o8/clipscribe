@@ -497,6 +497,7 @@ fun HomeScreen(
 
                         // Diagnostical row: Engine
                         val (engineValue, engineColor, engineComplete) = when (engineMode) {
+                            TranscriptionEngineMode.REMOTE_ENDPOINT -> Triple("Cloud endpoint", MaterialTheme.colorScheme.primary, true)
                             TranscriptionEngineMode.NATIVE_WHISPER -> Triple("Native Whisper", MaterialTheme.colorScheme.primary, true)
                             TranscriptionEngineMode.DEBUG_STUB -> Triple("Debug stub", MaterialTheme.colorScheme.secondary, true)
                             TranscriptionEngineMode.NOT_AVAILABLE -> Triple("Not available", MaterialTheme.colorScheme.error, false)
@@ -828,7 +829,7 @@ fun HomeScreen(
                                 val result = TranscriptionController.transcribePreparedAudio(context)
                                 val message = when (result) {
                                     TranscriptionResult.SUCCESS -> {
-                                        "Local transcription complete."
+                                        "Transcription complete."
                                     }
                                     TranscriptionResult.NO_PREPARED_AUDIO -> {
                                         "Prepare frozen audio first."
@@ -836,8 +837,11 @@ fun HomeScreen(
                                     TranscriptionResult.MODEL_MISSING -> {
                                         "Local transcription model not found."
                                     }
+                                    TranscriptionResult.AUTH_REQUIRED -> {
+                                        "Authentication expired. Reopen ClipScribe and try again."
+                                    }
                                     TranscriptionResult.ERROR -> {
-                                        if (!com.example.transcription.WhisperNativeBridge.isLibraryLoaded() && !com.example.transcription.TranscriptionStateHolder.isDebugStubEnabled()) {
+                                        if (!com.example.transcription.TranscriptionController.isTranscriptionAvailable()) {
                                             "Local transcription engine is not available on this build."
                                         } else {
                                             "Could not transcribe prepared audio."

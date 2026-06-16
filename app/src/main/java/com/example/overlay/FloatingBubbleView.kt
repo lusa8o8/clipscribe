@@ -267,6 +267,7 @@ class FloatingBubbleView(
                                         com.example.transcription.CaptureToTranscriptResult.AUDIO_TOO_SHORT -> "Recent audio is too short to transcribe."
                                         com.example.transcription.CaptureToTranscriptResult.NO_PREPARED_AUDIO -> "No recent audio buffer available yet."
                                         com.example.transcription.CaptureToTranscriptResult.MODEL_MISSING -> "Local transcription model not found."
+                                        com.example.transcription.CaptureToTranscriptResult.AUTH_REQUIRED -> "Authentication expired. Reopen ClipScribe and try again."
                                         com.example.transcription.CaptureToTranscriptResult.ENGINE_NOT_AVAILABLE -> "Local transcription engine is not available on this build."
                                         com.example.transcription.CaptureToTranscriptResult.TRANSCRIPTION_ERROR -> "Could not transcribe recent audio."
                                         else -> "Something went wrong while capturing recent audio."

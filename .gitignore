@@ -22,3 +22,5 @@ build-debug.log
 clipscribe-debug-device.log
 crash-log.txt
 crash-log-filtered.txt
+cloudflare-worker/node_modules
+cloudflare-worker/.wrangler

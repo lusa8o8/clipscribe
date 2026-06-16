@@ -14,7 +14,7 @@ object TranscriptionResultHolder {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    fun setSuccess(text: String, durationMs: Long) {
+    fun setSuccess(text: String, durationMs: Long?) {
         _latestText.value = text
         _durationMillis.value = durationMs
         _errorMessage.value = null

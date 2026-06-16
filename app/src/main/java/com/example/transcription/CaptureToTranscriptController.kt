@@ -34,7 +34,7 @@ object CaptureToTranscriptController {
             }
 
             // check engine availability before transcription or rely on it
-            if (!WhisperNativeBridge.isLibraryLoaded() && !TranscriptionStateHolder.isDebugStubEnabled()) {
+            if (!TranscriptionController.isTranscriptionAvailable()) {
                 return@withContext CaptureToTranscriptResult.ENGINE_NOT_AVAILABLE
             }
 
@@ -44,8 +44,9 @@ object CaptureToTranscriptController {
                 TranscriptionResult.SUCCESS -> return@withContext CaptureToTranscriptResult.SUCCESS
                 TranscriptionResult.NO_PREPARED_AUDIO -> return@withContext CaptureToTranscriptResult.NO_PREPARED_AUDIO
                 TranscriptionResult.MODEL_MISSING -> return@withContext CaptureToTranscriptResult.MODEL_MISSING
+                TranscriptionResult.AUTH_REQUIRED -> return@withContext CaptureToTranscriptResult.AUTH_REQUIRED
                 TranscriptionResult.ERROR -> {
-                    if (!WhisperNativeBridge.isLibraryLoaded() && !TranscriptionStateHolder.isDebugStubEnabled()) {
+                    if (!TranscriptionController.isTranscriptionAvailable()) {
                         return@withContext CaptureToTranscriptResult.ENGINE_NOT_AVAILABLE
                     } else {
                         return@withContext CaptureToTranscriptResult.TRANSCRIPTION_ERROR

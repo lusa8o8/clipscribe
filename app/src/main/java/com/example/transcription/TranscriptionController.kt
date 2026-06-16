@@ -1,19 +1,68 @@
 package com.example.transcription
 
 import android.content.Context
-import com.example.core.Constants
+import com.example.auth.FirebaseAuthStateHolder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object TranscriptionController {
     @Volatile
     private var whisperEngine: WhisperEngine? = null
+    @Volatile
+    private var remoteService: RemoteTranscriptionService? = null
+
+    fun isTranscriptionAvailable(): Boolean {
+        return RemoteTranscriptionConfig.isEnabled() ||
+            WhisperNativeBridge.isLibraryLoaded() ||
+            TranscriptionStateHolder.isDebugStubEnabled()
+    }
 
     suspend fun transcribePreparedAudio(context: Context): TranscriptionResult = withContext(Dispatchers.Default) {
         try {
             val preparedAudio = PreparedAudioHolder.getLatest()
             if (preparedAudio == null) {
                 return@withContext TranscriptionResult.NO_PREPARED_AUDIO
+            }
+
+            if (RemoteTranscriptionConfig.isEnabled()) {
+                TranscriptionStateHolder.markTranscribing()
+                var service = remoteService
+                if (service == null) {
+                    service = RemoteTranscriptionService(
+                        endpointUrl = RemoteTranscriptionConfig.endpointUrl(),
+                        httpClient = DefaultRemoteTranscriptionHttpClient()
+                    )
+                    remoteService = service
+                }
+
+                return@withContext when (
+                    val remoteResult = service.transcribe(
+                        preparedAudio = preparedAudio,
+                        firebaseIdToken = FirebaseAuthStateHolder.getLatestIdToken()
+                    )
+                ) {
+                    is RemoteTranscriptionOutcome.Success -> {
+                        TranscriptionResultHolder.setSuccess(
+                            text = remoteResult.value.text,
+                            durationMs = remoteResult.value.durationMillis
+                        )
+                        TranscriptionStateHolder.markSuccess()
+                        TranscriptionResult.SUCCESS
+                    }
+
+                    is RemoteTranscriptionOutcome.Failure -> {
+                        val failure = remoteResult.value
+                        TranscriptionResultHolder.setError(failure.message)
+                        TranscriptionStateHolder.markError()
+                        if (failure.code == RemoteTranscriptionFailureCode.AUTH_TOKEN_MISSING ||
+                            failure.code == RemoteTranscriptionFailureCode.UNAUTHORIZED
+                        ) {
+                            TranscriptionResult.AUTH_REQUIRED
+                        } else {
+                            TranscriptionResult.ERROR
+                        }
+                    }
+                }
             }
 
             if (!WhisperNativeBridge.isLibraryLoaded() && !TranscriptionStateHolder.isDebugStubEnabled()) {
