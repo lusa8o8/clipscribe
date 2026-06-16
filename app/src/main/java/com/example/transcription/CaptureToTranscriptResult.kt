@@ -8,6 +8,7 @@ enum class CaptureToTranscriptResult {
     NO_PREPARED_AUDIO,
     MODEL_MISSING,
     AUTH_REQUIRED,
+    QUOTA_EXCEEDED,
     ENGINE_NOT_AVAILABLE,
     TRANSCRIPTION_ERROR,
     ERROR

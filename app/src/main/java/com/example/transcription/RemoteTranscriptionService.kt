@@ -2,7 +2,10 @@ package com.example.transcription
 
 data class RemoteTranscriptionSuccess(
     val text: String,
-    val durationMillis: Long?
+    val durationMillis: Long?,
+    val freeTierDailyLimit: Int?,
+    val freeTierDailyUsed: Int?,
+    val freeTierDailyRemaining: Int?
 )
 
 enum class RemoteTranscriptionFailureCode {
@@ -32,6 +35,10 @@ class RemoteTranscriptionService(
     private val httpClient: RemoteTranscriptionHttpClient,
     private val debugLog: ((String, Throwable?) -> Unit)? = null
 ) {
+    private fun headerInt(response: RemoteTranscriptionHttpResponse, name: String): Int? {
+        return response.headers[name]?.toIntOrNull()
+    }
+
     suspend fun transcribe(
         preparedAudio: PreparedAudio?,
         firebaseIdToken: String?
@@ -110,14 +117,20 @@ class RemoteTranscriptionService(
                         )
                     } else {
                         val durationMillis = response.headers["X-ClipScribe-Transcription-Duration-Ms"]?.toLongOrNull()
+                        val freeTierDailyLimit = headerInt(response, "X-ClipScribe-Free-Limit")
+                        val freeTierDailyUsed = headerInt(response, "X-ClipScribe-Free-Used")
+                        val freeTierDailyRemaining = headerInt(response, "X-ClipScribe-Free-Remaining")
                         debugLog?.invoke(
-                            "Remote transcription success chars=${transcriptText.length} durationMs=${durationMillis ?: -1}",
+                            "Remote transcription success chars=${transcriptText.length} durationMs=${durationMillis ?: -1} freeRemaining=${freeTierDailyRemaining ?: -1}",
                             null
                         )
                         RemoteTranscriptionOutcome.Success(
                             RemoteTranscriptionSuccess(
                                 text = transcriptText,
-                                durationMillis = durationMillis
+                                durationMillis = durationMillis,
+                                freeTierDailyLimit = freeTierDailyLimit,
+                                freeTierDailyUsed = freeTierDailyUsed,
+                                freeTierDailyRemaining = freeTierDailyRemaining
                             )
                         )
                     }

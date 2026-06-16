@@ -8,12 +8,18 @@ object TranscriptResultStateHolder {
     private val _state = MutableStateFlow(TranscriptResultState())
     val state: StateFlow<TranscriptResultState> = _state.asStateFlow()
 
-    fun showSuccess(text: String, durationMillis: Long?, sourceDurationSeconds: Double?) {
+    fun showSuccess(
+        text: String,
+        durationMillis: Long?,
+        sourceDurationSeconds: Double?,
+        freeTierDailyRemaining: Int?
+    ) {
         _state.value = TranscriptResultState(
             isVisible = true,
             text = text,
             durationMillis = durationMillis,
             sourceDurationSeconds = sourceDurationSeconds,
+            freeTierDailyRemaining = freeTierDailyRemaining,
             errorMessage = null
         )
     }
@@ -24,6 +30,7 @@ object TranscriptResultStateHolder {
             text = "",
             durationMillis = null,
             sourceDurationSeconds = null,
+            freeTierDailyRemaining = null,
             errorMessage = message
         )
     }

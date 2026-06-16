@@ -132,6 +132,7 @@ fun HomeScreen(
     val engineMode by TranscriptionStateHolder.engineMode.collectAsState()
     val transcriptText by TranscriptionResultHolder.latestText.collectAsState()
     val transcriptionDurationMs by TranscriptionResultHolder.durationMillis.collectAsState()
+    val freeTierUsage by TranscriptionResultHolder.freeTierUsage.collectAsState()
 
     // Observe Transcript Result Sheet State
     val transcriptResultState by TranscriptResultStateHolder.state.collectAsState()
@@ -840,6 +841,9 @@ fun HomeScreen(
                                     TranscriptionResult.AUTH_REQUIRED -> {
                                         "Authentication expired. Reopen ClipScribe and try again."
                                     }
+                                    TranscriptionResult.QUOTA_EXCEEDED -> {
+                                        "Free transcript limit reached for today."
+                                    }
                                     TranscriptionResult.ERROR -> {
                                         if (!com.example.transcription.TranscriptionController.isTranscriptionAvailable()) {
                                             "Local transcription engine is not available on this build."
@@ -1001,6 +1005,22 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.testTag("user_help_text")
                             )
+
+                            if (engineMode == TranscriptionEngineMode.REMOTE_ENDPOINT) {
+                                freeTierUsage.dailyRemaining?.let { remaining ->
+                                    Text(
+                                        text = if (remaining == 1) {
+                                            "1 free capture left today"
+                                        } else {
+                                            "$remaining free captures left today"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.testTag("free_uses_remaining_text")
+                                    )
+                                }
+                            }
 
                             if (isCaptureActive) {
                                 Button(

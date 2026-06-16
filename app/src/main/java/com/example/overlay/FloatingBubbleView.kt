@@ -248,12 +248,14 @@ class FloatingBubbleView(
                                 if (result == com.example.transcription.CaptureToTranscriptResult.SUCCESS) {
                                     val text = com.example.transcription.TranscriptionResultHolder.latestText.value
                                     val durationMs = com.example.transcription.TranscriptionResultHolder.durationMillis.value
+                                    val freeTierDailyRemaining = com.example.transcription.TranscriptionResultHolder.freeTierUsage.value.dailyRemaining
                                     val sourceDurationSec = com.example.transcription.PreparedAudioHolder.getLatest()?.durationSeconds
 
                                     com.example.ui.result.TranscriptResultStateHolder.showSuccess(
                                         text = text,
                                         durationMillis = durationMs,
-                                        sourceDurationSeconds = sourceDurationSec
+                                        sourceDurationSeconds = sourceDurationSec,
+                                        freeTierDailyRemaining = freeTierDailyRemaining
                                     )
 
                                     updateBubbleState(BubbleState.SUCCESS)
@@ -268,6 +270,7 @@ class FloatingBubbleView(
                                         com.example.transcription.CaptureToTranscriptResult.NO_PREPARED_AUDIO -> "No recent audio buffer available yet."
                                         com.example.transcription.CaptureToTranscriptResult.MODEL_MISSING -> "Local transcription model not found."
                                         com.example.transcription.CaptureToTranscriptResult.AUTH_REQUIRED -> "Authentication expired. Reopen ClipScribe and try again."
+                                        com.example.transcription.CaptureToTranscriptResult.QUOTA_EXCEEDED -> "Free transcript limit reached for today."
                                         com.example.transcription.CaptureToTranscriptResult.ENGINE_NOT_AVAILABLE -> "Local transcription engine is not available on this build."
                                         com.example.transcription.CaptureToTranscriptResult.TRANSCRIPTION_ERROR -> "Could not transcribe recent audio."
                                         else -> "Something went wrong while capturing recent audio."

@@ -45,6 +45,7 @@ object CaptureToTranscriptController {
                 TranscriptionResult.NO_PREPARED_AUDIO -> return@withContext CaptureToTranscriptResult.NO_PREPARED_AUDIO
                 TranscriptionResult.MODEL_MISSING -> return@withContext CaptureToTranscriptResult.MODEL_MISSING
                 TranscriptionResult.AUTH_REQUIRED -> return@withContext CaptureToTranscriptResult.AUTH_REQUIRED
+                TranscriptionResult.QUOTA_EXCEEDED -> return@withContext CaptureToTranscriptResult.QUOTA_EXCEEDED
                 TranscriptionResult.ERROR -> {
                     if (!TranscriptionController.isTranscriptionAvailable()) {
                         return@withContext CaptureToTranscriptResult.ENGINE_NOT_AVAILABLE

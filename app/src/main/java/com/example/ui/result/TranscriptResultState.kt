@@ -5,5 +5,6 @@ data class TranscriptResultState(
     val text: String = "",
     val durationMillis: Long? = null,
     val sourceDurationSeconds: Double? = null,
+    val freeTierDailyRemaining: Int? = null,
     val errorMessage: String? = null
 )

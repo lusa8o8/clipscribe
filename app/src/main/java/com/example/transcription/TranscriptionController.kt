@@ -48,7 +48,10 @@ object TranscriptionController {
                     is RemoteTranscriptionOutcome.Success -> {
                         TranscriptionResultHolder.setSuccess(
                             text = remoteResult.value.text,
-                            durationMs = remoteResult.value.durationMillis
+                            durationMs = remoteResult.value.durationMillis,
+                            freeTierDailyLimit = remoteResult.value.freeTierDailyLimit,
+                            freeTierDailyUsed = remoteResult.value.freeTierDailyUsed,
+                            freeTierDailyRemaining = remoteResult.value.freeTierDailyRemaining
                         )
                         TranscriptionStateHolder.markSuccess()
                         TranscriptionResult.SUCCESS
@@ -66,6 +69,8 @@ object TranscriptionController {
                             failure.code == RemoteTranscriptionFailureCode.UNAUTHORIZED
                         ) {
                             TranscriptionResult.AUTH_REQUIRED
+                        } else if (failure.code == RemoteTranscriptionFailureCode.QUOTA_EXCEEDED) {
+                            TranscriptionResult.QUOTA_EXCEEDED
                         } else {
                             TranscriptionResult.ERROR
                         }

@@ -99,6 +99,17 @@ fun TranscriptResultSheet(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        state.freeTierDailyRemaining?.let { remaining ->
+                            Text(
+                                text = if (remaining == 1) {
+                                    "1 free capture left today"
+                                } else {
+                                    "$remaining free captures left today"
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 } else {
                     // Error message

@@ -5,5 +5,6 @@ enum class TranscriptionResult {
     NO_PREPARED_AUDIO,
     MODEL_MISSING,
     AUTH_REQUIRED,
+    QUOTA_EXCEEDED,
     ERROR
 }

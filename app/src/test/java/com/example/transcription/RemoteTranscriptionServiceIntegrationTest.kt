@@ -12,7 +12,12 @@ class RemoteTranscriptionServiceIntegrationTest {
             response = RemoteTranscriptionHttpResponse(
                 statusCode = 200,
                 body = "useful transcript",
-                headers = mapOf("X-ClipScribe-Transcription-Duration-Ms" to "842")
+                headers = mapOf(
+                    "X-ClipScribe-Transcription-Duration-Ms" to "842",
+                    "X-ClipScribe-Free-Limit" to "10",
+                    "X-ClipScribe-Free-Used" to "2",
+                    "X-ClipScribe-Free-Remaining" to "8"
+                )
             )
         )
         val service = RemoteTranscriptionService(
@@ -29,6 +34,9 @@ class RemoteTranscriptionServiceIntegrationTest {
         val success = result as RemoteTranscriptionOutcome.Success
         assertEquals("useful transcript", success.value.text)
         assertEquals(842L, success.value.durationMillis)
+        assertEquals(10, success.value.freeTierDailyLimit)
+        assertEquals(2, success.value.freeTierDailyUsed)
+        assertEquals(8, success.value.freeTierDailyRemaining)
         assertEquals("https://example.com/transcribe", fakeClient.lastUrl)
         assertEquals("firebase-token", fakeClient.lastBearerToken)
         assertEquals(16000, fakeClient.lastPreparedAudio?.sampleRate)
