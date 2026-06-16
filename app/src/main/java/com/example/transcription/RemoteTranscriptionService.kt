@@ -11,6 +11,7 @@ enum class RemoteTranscriptionFailureCode {
     PREPARED_AUDIO_MISSING,
     WAV_BYTES_MISSING,
     UNAUTHORIZED,
+    QUOTA_EXCEEDED,
     UPSTREAM_ERROR,
     INVALID_RESPONSE,
     NETWORK_ERROR
@@ -131,6 +132,17 @@ class RemoteTranscriptionService(
                     )
                 ).also {
                     debugLog?.invoke("Remote transcription unauthorized", null)
+                }
+
+                429 -> RemoteTranscriptionOutcome.Failure(
+                    RemoteTranscriptionFailure(
+                        code = RemoteTranscriptionFailureCode.QUOTA_EXCEEDED,
+                        message = response.body.ifBlank {
+                            "Free transcript limit reached for today."
+                        }
+                    )
+                ).also {
+                    debugLog?.invoke("Remote transcription quota exceeded", null)
                 }
 
                 else -> RemoteTranscriptionOutcome.Failure(

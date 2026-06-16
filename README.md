@@ -9,7 +9,7 @@ Current status:
 - Frozen audio preparation works
 - Debug transcript flow works end-to-end
 - Firebase anonymous auth is wired in for beta identity
-- Cloud transcription backend is not connected yet
+- Cloud transcription works end-to-end through Cloudflare Workers AI
 
 ## Current product flow
 
@@ -94,6 +94,7 @@ Current contract:
 
 - App sends raw WAV bytes as the request body
 - App sends Firebase ID token as `Authorization: Bearer <token>`
+- Worker verifies the Firebase ID token against Google's Secure Token signing certs
 - Worker returns transcript text as plain text
 - Worker may return `X-ClipScribe-Transcription-Duration-Ms` when available
 
@@ -112,6 +113,18 @@ Alternative cheaper / smaller English-only model:
 
 The Android app will only use the remote path when `TRANSCRIPTION_ENDPOINT_URL` is set in the environment at build time.
 
+Required worker variables:
+
+- `FIREBASE_PROJECT_ID`
+- `FREE_TIER_DAILY_TRANSCRIPT_LIMIT`
+- `TRANSCRIPTION_PROVIDER`
+- `TRANSCRIPTION_MODEL`
+- `TRANSCRIPTION_LANGUAGE` (optional)
+
+Optional worker bindings:
+
+- `USAGE_KV`: Cloudflare KV namespace used for soft per-user daily transcript counting
+
 ## Focused integration tests
 
 Instead of running the full test surface for every backend change, use the targeted business-path checks:
@@ -127,6 +140,8 @@ These currently cover:
 - remote success response -> transcript mapping
 - auth failure -> user-facing auth error path
 - worker request validation and success/error HTTP behavior
+- Firebase token verification gate at the worker boundary
+- per-user free-tier quota enforcement behavior
 - Workers AI binding payload shape for the supported Whisper models
 
 ## Architecture notes
@@ -142,15 +157,15 @@ Main pieces in the current MVP:
 Important current limitation:
 
 - The native Whisper JNI implementation is still a stub for debug-mode transcript output
-- Cloud transcription has not been connected yet
+- Anonymous users reset on uninstall or app-data wipe
 
 ## Next backend step
 
 The next planned step is:
 
-- Android app sends prepared WAV audio plus Firebase ID token to a backend
-- Backend verifies identity and forwards audio to a transcription provider
-- Transcript is returned to the app and optionally stored with user feedback metadata
+- Add soft usage limits for verified Firebase users
+- Keep transcripts ephemeral in the MVP
+- Introduce account linking later for users who want transcript history
 
 Planned provider path:
 

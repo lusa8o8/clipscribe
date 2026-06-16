@@ -4,6 +4,8 @@
   "main": "src/index.mjs",
   "compatibility_date": "2026-06-16",
   "vars": {
+    "FIREBASE_PROJECT_ID": "clipscribe-e3668",
+    "FREE_TIER_DAILY_TRANSCRIPT_LIMIT": "5",
     "TRANSCRIPTION_PROVIDER": "mock",
     "MOCK_TRANSCRIPTION_TEXT": "[MOCK] Cloud transcript ready.",
     "TRANSCRIPTION_MODEL": "@cf/openai/whisper-large-v3-turbo",

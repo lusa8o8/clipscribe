@@ -96,6 +96,30 @@ class RemoteTranscriptionServiceIntegrationTest {
         assertEquals(RemoteTranscriptionFailureCode.WAV_BYTES_MISSING, failure.value.code)
     }
 
+    @Test
+    fun `returns quota failure when endpoint rejects free-tier limit`() = runTest {
+        val service = RemoteTranscriptionService(
+            endpointUrl = "https://example.com/transcribe",
+            httpClient = FakeRemoteTranscriptionHttpClient(
+                response = RemoteTranscriptionHttpResponse(
+                    statusCode = 429,
+                    body = "Free transcript limit reached for today.",
+                    headers = emptyMap()
+                )
+            )
+        )
+
+        val result = service.transcribe(
+            preparedAudio = samplePreparedAudio(),
+            firebaseIdToken = "firebase-token"
+        )
+
+        assertTrue(result is RemoteTranscriptionOutcome.Failure)
+        val failure = result as RemoteTranscriptionOutcome.Failure
+        assertEquals(RemoteTranscriptionFailureCode.QUOTA_EXCEEDED, failure.value.code)
+        assertEquals("Free transcript limit reached for today.", failure.value.message)
+    }
+
     private fun samplePreparedAudio(wavBytes: ByteArray? = byteArrayOf(1, 2, 3, 4)): PreparedAudio {
         return PreparedAudio(
             floatSamples = floatArrayOf(0.1f, -0.2f, 0.3f),
