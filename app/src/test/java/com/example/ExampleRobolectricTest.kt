@@ -109,7 +109,7 @@ class ExampleRobolectricTest {
     holder.clear()
     assertFalse(holder.state.value.isVisible)
 
-    holder.showSuccess("Hello Test", 1234L, 45.0)
+    holder.showSuccess("Hello Test", 1234L, 45.0, null)
     assertTrue(holder.state.value.isVisible)
     assertEquals("Hello Test", holder.state.value.text)
     assertEquals(1234L, holder.state.value.durationMillis)

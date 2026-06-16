@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.auth.AccountUpgradeResult
 import com.example.auth.AuthStatus
 import com.example.auth.FirebaseAuthStateHolder
 import com.example.capture.AudioCaptureService
@@ -57,6 +58,8 @@ import com.example.capture.CaptureModeStateHolder
 import com.example.capture.CaptureModeController
 import com.example.ui.DeveloperModeStateHolder
 import com.example.permissions.PermissionManager
+import com.example.storage.SaveTranscriptResult
+import com.example.storage.SavedTranscriptStateHolder
 import com.example.ui.result.TranscriptResultSheet
 import com.example.ui.result.TranscriptResultStateHolder
 import kotlinx.coroutines.launch
@@ -70,6 +73,10 @@ fun HomeScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    var showUpgradeDialog by remember { mutableStateOf(false) }
+    var upgradeEmail by remember { mutableStateOf("") }
+    var upgradePassword by remember { mutableStateOf("") }
+    var upgradeErrorMessage by remember { mutableStateOf<String?>(null) }
 
     // Observe Capture Mode state
     val captureModeState by CaptureModeStateHolder.state.collectAsState()
@@ -99,6 +106,14 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         setupComplete = permissionManager.checkAllPermissions()
+    }
+
+    LaunchedEffect(authState.status) {
+        if (authState.canPersistTranscripts) {
+            showUpgradeDialog = false
+            upgradePassword = ""
+            upgradeErrorMessage = null
+        }
     }
 
     // Observe floating bubble active status dynamically from StateHolder
@@ -136,6 +151,7 @@ fun HomeScreen(
 
     // Observe Transcript Result Sheet State
     val transcriptResultState by TranscriptResultStateHolder.state.collectAsState()
+    val savedTranscripts by SavedTranscriptStateHolder.transcripts.collectAsState()
 
     val mediaProjectionPermissionHelper = remember { MediaProjectionPermissionHelper(context) }
 
@@ -333,9 +349,14 @@ fun HomeScreen(
                         val (authValue, authColor, authComplete) = when (authState.status) {
                             AuthStatus.NOT_STARTED -> Triple("Not started", MaterialTheme.colorScheme.outline, false)
                             AuthStatus.SIGNING_IN -> Triple("Signing in", MaterialTheme.colorScheme.secondary, false)
+                            AuthStatus.UPGRADING_ACCOUNT -> Triple("Upgrading", MaterialTheme.colorScheme.secondary, false)
                             AuthStatus.SIGNED_IN_ANONYMOUSLY -> {
                                 val shortUid = authState.uid?.takeLast(6) ?: "ready"
                                 Triple("Anonymous $shortUid", MaterialTheme.colorScheme.primary, true)
+                            }
+                            AuthStatus.SIGNED_IN_EMAIL -> {
+                                val emailLabel = authState.email?.take(20) ?: "Signed in"
+                                Triple(emailLabel, MaterialTheme.colorScheme.primary, true)
                             }
                             AuthStatus.ERROR -> Triple(
                                 authState.errorMessage?.take(28) ?: "Error",
@@ -1022,6 +1043,22 @@ fun HomeScreen(
                                 }
                             }
 
+                            if (!authState.canPersistTranscripts) {
+                                TextButton(
+                                    onClick = {
+                                        upgradeErrorMessage = null
+                                        showUpgradeDialog = true
+                                    },
+                                    modifier = Modifier.testTag("create_account_to_save_button")
+                                ) {
+                                    Text(
+                                        text = "Create account to save transcripts",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
                             if (isCaptureActive) {
                                 Button(
                                     onClick = {
@@ -1070,6 +1107,76 @@ fun HomeScreen(
                 }
             }
 
+            if (!isDevModeEnabled && authState.canPersistTranscripts) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("saved_transcripts_card"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Saved transcripts",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = authState.email ?: "Signed-in account",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        if (savedTranscripts.isEmpty()) {
+                            Text(
+                                text = "Saved transcripts will appear here after you save one from the transcript sheet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            savedTranscripts.take(3).forEach { transcript ->
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "${transcript.durationSeconds}s buffer",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = transcript.text,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (savedTranscripts.size > 3) {
+                                Text(
+                                    text = "${savedTranscripts.size - 3} more saved transcript(s) stored on this device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Developer Mode switch right at the bottom
@@ -1097,8 +1204,80 @@ fun HomeScreen(
 
     TranscriptResultSheet(
         state = transcriptResultState,
-        onDismiss = { TranscriptResultStateHolder.dismiss() }
+        onDismiss = { TranscriptResultStateHolder.dismiss() },
+        onSaveTranscript = {
+            coroutineScope.launch {
+                if (!authState.canPersistTranscripts) {
+                    upgradeErrorMessage = null
+                    showUpgradeDialog = true
+                    return@launch
+                }
+
+                when (
+                    SavedTranscriptStateHolder.saveTranscript(
+                        text = transcriptResultState.text,
+                        sourceDurationSeconds = transcriptResultState.sourceDurationSeconds
+                    )
+                ) {
+                    SaveTranscriptResult.SUCCESS -> {
+                        Toast.makeText(context, "Transcript saved on this device.", Toast.LENGTH_SHORT).show()
+                        snackbarHostState.showSnackbar("Transcript saved on this device.")
+                    }
+                    SaveTranscriptResult.AUTH_REQUIRED -> {
+                        upgradeErrorMessage = null
+                        showUpgradeDialog = true
+                    }
+                    SaveTranscriptResult.EMPTY_TRANSCRIPT -> {
+                        Toast.makeText(context, "No transcript available to save.", Toast.LENGTH_SHORT).show()
+                        snackbarHostState.showSnackbar("No transcript available to save.")
+                    }
+                }
+            }
+        },
+        saveActionLabel = if (authState.canPersistTranscripts) {
+            "Save transcript"
+        } else {
+            "Create account to save"
+        }
     )
+
+    if (showUpgradeDialog) {
+        EmailAccountUpgradeDialog(
+            email = upgradeEmail,
+            password = upgradePassword,
+            errorMessage = upgradeErrorMessage,
+            isSubmitting = authState.status == AuthStatus.UPGRADING_ACCOUNT,
+            onEmailChange = { upgradeEmail = it },
+            onPasswordChange = { upgradePassword = it },
+            onConfirm = {
+                FirebaseAuthStateHolder.upgradeAnonymousAccount(
+                    context = context,
+                    email = upgradeEmail,
+                    password = upgradePassword
+                ) { result, message ->
+                    when (result) {
+                        AccountUpgradeResult.SUCCESS -> {
+                            upgradeErrorMessage = null
+                            coroutineScope.launch {
+                                Toast.makeText(context, "Account ready. You can now save transcripts.", Toast.LENGTH_SHORT).show()
+                                snackbarHostState.showSnackbar("Account ready. You can now save transcripts.")
+                            }
+                        }
+                        AccountUpgradeResult.INVALID_INPUT -> {
+                            upgradeErrorMessage = message
+                        }
+                        AccountUpgradeResult.ERROR -> {
+                            upgradeErrorMessage = message ?: "Could not connect that account."
+                        }
+                    }
+                }
+            },
+            onDismiss = {
+                showUpgradeDialog = false
+                upgradeErrorMessage = null
+            }
+        )
+    }
 }
 
 @Composable

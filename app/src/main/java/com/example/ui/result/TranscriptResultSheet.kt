@@ -16,6 +16,8 @@ import androidx.compose.ui.window.Dialog
 fun TranscriptResultSheet(
     state: TranscriptResultState,
     onDismiss: () -> Unit,
+    onSaveTranscript: (() -> Unit)? = null,
+    saveActionLabel: String? = null,
     modifier: Modifier = Modifier
 ) {
     if (!state.isVisible) return
@@ -170,6 +172,24 @@ fun TranscriptResultSheet(
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+
+                    if (onSaveTranscript != null) {
+                        OutlinedButton(
+                            onClick = onSaveTranscript,
+                            enabled = !isTextBlank,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("save_transcript_button"),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text(
+                                text = saveActionLabel ?: "Save transcript",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     // Close (Tertiary)
