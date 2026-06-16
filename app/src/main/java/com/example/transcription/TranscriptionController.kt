@@ -2,6 +2,7 @@ package com.example.transcription
 
 import android.content.Context
 import com.example.auth.FirebaseAuthStateHolder
+import com.example.core.DebugFileLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -30,7 +31,10 @@ object TranscriptionController {
                 if (service == null) {
                     service = RemoteTranscriptionService(
                         endpointUrl = RemoteTranscriptionConfig.endpointUrl(),
-                        httpClient = DefaultRemoteTranscriptionHttpClient()
+                        httpClient = DefaultRemoteTranscriptionHttpClient(),
+                        debugLog = { message, throwable ->
+                            DebugFileLog.write(context, message, throwable)
+                        }
                     )
                     remoteService = service
                 }
@@ -52,6 +56,10 @@ object TranscriptionController {
 
                     is RemoteTranscriptionOutcome.Failure -> {
                         val failure = remoteResult.value
+                        DebugFileLog.write(
+                            context,
+                            "Remote transcription mapped failure code=${failure.code} message=${failure.message.take(180)}"
+                        )
                         TranscriptionResultHolder.setError(failure.message)
                         TranscriptionStateHolder.markError()
                         if (failure.code == RemoteTranscriptionFailureCode.AUTH_TOKEN_MISSING ||

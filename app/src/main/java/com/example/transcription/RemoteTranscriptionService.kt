@@ -28,13 +28,15 @@ sealed interface RemoteTranscriptionOutcome {
 
 class RemoteTranscriptionService(
     private val endpointUrl: String,
-    private val httpClient: RemoteTranscriptionHttpClient
+    private val httpClient: RemoteTranscriptionHttpClient,
+    private val debugLog: ((String, Throwable?) -> Unit)? = null
 ) {
     suspend fun transcribe(
         preparedAudio: PreparedAudio?,
         firebaseIdToken: String?
     ): RemoteTranscriptionOutcome {
         if (endpointUrl.isBlank()) {
+            debugLog?.invoke("Remote transcription skipped: endpoint URL is blank", null)
             return RemoteTranscriptionOutcome.Failure(
                 RemoteTranscriptionFailure(
                     code = RemoteTranscriptionFailureCode.ENDPOINT_NOT_CONFIGURED,
@@ -44,6 +46,7 @@ class RemoteTranscriptionService(
         }
 
         if (preparedAudio == null) {
+            debugLog?.invoke("Remote transcription skipped: prepared audio is missing", null)
             return RemoteTranscriptionOutcome.Failure(
                 RemoteTranscriptionFailure(
                     code = RemoteTranscriptionFailureCode.PREPARED_AUDIO_MISSING,
@@ -53,6 +56,7 @@ class RemoteTranscriptionService(
         }
 
         if (preparedAudio.wavBytes == null) {
+            debugLog?.invoke("Remote transcription skipped: WAV bytes are missing", null)
             return RemoteTranscriptionOutcome.Failure(
                 RemoteTranscriptionFailure(
                     code = RemoteTranscriptionFailureCode.WAV_BYTES_MISSING,
@@ -62,6 +66,7 @@ class RemoteTranscriptionService(
         }
 
         if (firebaseIdToken.isNullOrBlank()) {
+            debugLog?.invoke("Remote transcription skipped: Firebase ID token is missing", null)
             return RemoteTranscriptionOutcome.Failure(
                 RemoteTranscriptionFailure(
                     code = RemoteTranscriptionFailureCode.AUTH_TOKEN_MISSING,
@@ -70,6 +75,11 @@ class RemoteTranscriptionService(
             )
         }
 
+        debugLog?.invoke(
+            "Remote transcription request begin durationSec=${preparedAudio.durationSeconds} sampleRate=${preparedAudio.sampleRate} wavBytes=${preparedAudio.wavBytes.size}",
+            null
+        )
+
         return try {
             val response = httpClient.postWav(
                 url = endpointUrl,
@@ -77,10 +87,20 @@ class RemoteTranscriptionService(
                 preparedAudio = preparedAudio
             )
 
+            val responsePreview = response.body
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .take(180)
+            debugLog?.invoke(
+                "Remote transcription response status=${response.statusCode} bodyPreview=$responsePreview",
+                null
+            )
+
             when (response.statusCode) {
                 200 -> {
                     val transcriptText = response.body.trim()
                     if (transcriptText.isBlank()) {
+                        debugLog?.invoke("Remote transcription failed: empty transcript body", null)
                         RemoteTranscriptionOutcome.Failure(
                             RemoteTranscriptionFailure(
                                 code = RemoteTranscriptionFailureCode.INVALID_RESPONSE,
@@ -89,6 +109,10 @@ class RemoteTranscriptionService(
                         )
                     } else {
                         val durationMillis = response.headers["X-ClipScribe-Transcription-Duration-Ms"]?.toLongOrNull()
+                        debugLog?.invoke(
+                            "Remote transcription success chars=${transcriptText.length} durationMs=${durationMillis ?: -1}",
+                            null
+                        )
                         RemoteTranscriptionOutcome.Success(
                             RemoteTranscriptionSuccess(
                                 text = transcriptText,
@@ -105,7 +129,9 @@ class RemoteTranscriptionService(
                             "Authentication failed for remote transcription."
                         }
                     )
-                )
+                ).also {
+                    debugLog?.invoke("Remote transcription unauthorized", null)
+                }
 
                 else -> RemoteTranscriptionOutcome.Failure(
                     RemoteTranscriptionFailure(
@@ -114,9 +140,12 @@ class RemoteTranscriptionService(
                             "Remote transcription failed with status ${response.statusCode}."
                         }
                     )
-                )
+                ).also {
+                    debugLog?.invoke("Remote transcription upstream error status=${response.statusCode}", null)
+                }
             }
         } catch (error: Exception) {
+            debugLog?.invoke("Remote transcription network exception", error)
             RemoteTranscriptionOutcome.Failure(
                 RemoteTranscriptionFailure(
                     code = RemoteTranscriptionFailureCode.NETWORK_ERROR,

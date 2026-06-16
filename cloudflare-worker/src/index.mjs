@@ -14,6 +14,17 @@ function serverError(message) {
   return new Response(message, { status: 502 });
 }
 
+function arrayBufferToBase64(arrayBuffer) {
+  let binary = "";
+  const bytes = new Uint8Array(arrayBuffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
 function extractTranscriptText(result) {
   if (typeof result === "string") {
     return result.trim();
@@ -28,6 +39,9 @@ function extractTranscriptText(result) {
     }
     if (typeof result.result?.text === "string") {
       return result.result.text.trim();
+    }
+    if (typeof result.transcription_info?.text === "string") {
+      return result.transcription_info.text.trim();
     }
   }
 
@@ -47,9 +61,25 @@ async function transcribeWithCloudflareBinding(env, audioBytes) {
     throw new Error("Cloudflare AI binding is not configured.");
   }
 
-  const aiResult = await env.AI.run("@cf/openai/whisper", {
-    audio: Array.from(new Uint8Array(audioBytes))
-  });
+  const model = env.TRANSCRIPTION_MODEL || "@cf/openai/whisper-large-v3-turbo";
+  const language = env.TRANSCRIPTION_LANGUAGE;
+
+  let input;
+  if (model === "@cf/openai/whisper-tiny-en") {
+    input = {
+      audio: Array.from(new Uint8Array(audioBytes))
+    };
+  } else {
+    input = {
+      audio: arrayBufferToBase64(audioBytes)
+    };
+  }
+
+  if (language) {
+    input.language = language;
+  }
+
+  const aiResult = await env.AI.run(model, input);
 
   const text = extractTranscriptText(aiResult);
   if (!text) {

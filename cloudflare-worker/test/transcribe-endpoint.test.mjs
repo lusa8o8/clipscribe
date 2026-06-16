@@ -66,3 +66,55 @@ test("worker routes transcribe path and rejects unknown paths", async () => {
   );
   assert.equal(notFoundResponse.status, 404);
 });
+
+test("uses Cloudflare binding with base64 audio for whisper-large-v3-turbo", async () => {
+  let receivedModel = null;
+  let receivedInput = null;
+  const response = await handleTranscribeRequest(
+    makeRequest(),
+    {
+      TRANSCRIPTION_PROVIDER: "cloudflare-binding",
+      TRANSCRIPTION_MODEL: "@cf/openai/whisper-large-v3-turbo",
+      TRANSCRIPTION_LANGUAGE: "en",
+      AI: {
+        async run(model, input) {
+          receivedModel = model;
+          receivedInput = input;
+          return { text: "real transcript" };
+        }
+      }
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "real transcript");
+  assert.equal(receivedModel, "@cf/openai/whisper-large-v3-turbo");
+  assert.equal(typeof receivedInput.audio, "string");
+  assert.equal(receivedInput.language, "en");
+});
+
+test("uses Cloudflare binding with byte array audio for whisper-tiny-en", async () => {
+  let receivedModel = null;
+  let receivedInput = null;
+  const response = await handleTranscribeRequest(
+    makeRequest({
+      body: new Uint8Array([10, 20, 30, 40])
+    }),
+    {
+      TRANSCRIPTION_PROVIDER: "cloudflare-binding",
+      TRANSCRIPTION_MODEL: "@cf/openai/whisper-tiny-en",
+      AI: {
+        async run(model, input) {
+          receivedModel = model;
+          receivedInput = input;
+          return { transcription_info: { text: "tiny transcript" } };
+        }
+      }
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "tiny transcript");
+  assert.equal(receivedModel, "@cf/openai/whisper-tiny-en");
+  assert.deepEqual(receivedInput.audio, [10, 20, 30, 40]);
+});

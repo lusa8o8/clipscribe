@@ -5,6 +5,11 @@
   "compatibility_date": "2026-06-16",
   "vars": {
     "TRANSCRIPTION_PROVIDER": "mock",
-    "MOCK_TRANSCRIPTION_TEXT": "[MOCK] Cloud transcript ready."
+    "MOCK_TRANSCRIPTION_TEXT": "[MOCK] Cloud transcript ready.",
+    "TRANSCRIPTION_MODEL": "@cf/openai/whisper-large-v3-turbo",
+    "TRANSCRIPTION_LANGUAGE": "en"
+  },
+  "ai": {
+    "binding": "AI"
   }
 }

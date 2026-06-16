@@ -100,7 +100,15 @@ Current contract:
 Current provider modes:
 
 - `mock`: local development and contract testing
-- `cloudflare-binding`: intended for a real Workers AI binding
+- `cloudflare-binding`: uses a real Workers AI binding exposed as `env.AI`
+
+Recommended Workers AI model:
+
+- `@cf/openai/whisper-large-v3-turbo`
+
+Alternative cheaper / smaller English-only model:
+
+- `@cf/openai/whisper-tiny-en`
 
 The Android app will only use the remote path when `TRANSCRIPTION_ENDPOINT_URL` is set in the environment at build time.
 
@@ -119,6 +127,7 @@ These currently cover:
 - remote success response -> transcript mapping
 - auth failure -> user-facing auth error path
 - worker request validation and success/error HTTP behavior
+- Workers AI binding payload shape for the supported Whisper models
 
 ## Architecture notes
 
