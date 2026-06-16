@@ -1,0 +1,6 @@
+{
+  "name": "ClipScribe",
+  "description": "Captured phone audio real-time local transcriber MVP.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
