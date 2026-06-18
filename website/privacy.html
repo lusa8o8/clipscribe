@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — ClipScribe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0c0714;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            line-height: 1.7;
+            padding: 60px 20px;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: rgba(25, 16, 38, 0.6);
+            border: 1px solid rgba(124, 58, 237, 0.15);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .last-updated {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+        }
+        p {
+            color: #d1d5db;
+            margin-bottom: 16px;
+        }
+        ul {
+            margin-left: 20px;
+            margin-bottom: 16px;
+            color: #d1d5db;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .footer {
+            margin-top: 48px;
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html">&larr; Back to Home</a>
+        <h1 style="margin-top: 20px;">Privacy Policy</h1>
+        <div class="last-updated">Last Updated: June 18, 2026</div>
+
+        <p>At ClipScribe, we take your privacy and the security of your data seriously. This Privacy Policy describes how we handle, process, and protect your information when you use the ClipScribe mobile application and our associated services.</p>
+
+        <h2>1. In-Memory Loop Processing</h2>
+        <p>ClipScribe captures internal system audio retroactively. To do this, the application maintains a brief, ephemeral 60-second audio loop directly in your device's memory (RAM). This loop is continuously overwritten. Raw audio data is never written to your device's storage unless you explicitly request a capture, and audio older than 60 seconds is immediately discarded.</p>
+
+        <h2>2. Data Collection and Transmission</h2>
+        <p>When you trigger a transcription, we process the captured audio segment as follows:</p>
+        <ul>
+            <li><strong>Audio Transmission:</strong> The audio snippet is securely sent over HTTPS to our Cloudflare Workers AI backend.</li>
+            <li><strong>Transcription Engine:</strong> The transcription is processed ephemerally using OpenAI Whisper AI models hosted on Cloudflare's secure infrastructure. The audio data is processed entirely in memory and is deleted immediately after transcription completes.</li>
+            <li><strong>No Storage of Audio:</strong> We do not store or keep copies of your audio files on our servers.</li>
+        </ul>
+
+        <h2>3. Accounts and Authentication</h2>
+        <p>To access the app's history features, we use <strong>Firebase Authentication</strong> (Google Accounts, anonymous, or email sign-in). Firebase collects basic account information (such as email address and user UID) to secure your data. Your saved transcripts are stored in our secure database linked to your account UID so that they are accessible only to you.</p>
+
+        <h2>4. Waitlist Sign-up</h2>
+        <p>If you join the ClipScribe waitlist or pre-order on our landing page, we collect your email address and platform choice (iOS/Android). We only use this information to send you updates about ClipScribe product launches, waitlist status, and related announcements. We do not sell or share your contact information with third parties.</p>
+
+        <h2>5. Your Choices & Data Rights</h2>
+        <p>You can delete your saved transcripts at any time directly within the ClipScribe app. Doing so permanently removes the transcription record from our database. If you would like to delete your account or be removed from the waitlist, please contact us at support@clipscribe.com.</p>
+
+        <h2>6. Changes to this Policy</h2>
+        <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.</p>
+
+        <div class="footer">
+            &copy; 2026 ClipScribe. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

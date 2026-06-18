@@ -6,13 +6,25 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,14 +81,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onNavigateToPermissions: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var showUpgradeDialog by remember { mutableStateOf(false) }
-    var upgradeEmail by remember { mutableStateOf("") }
-    var upgradePassword by remember { mutableStateOf("") }
     var upgradeErrorMessage by remember { mutableStateOf<String?>(null) }
 
     // Observe Capture Mode state
@@ -89,7 +101,7 @@ fun HomeScreen(
 
     // Setup completeness evaluation
     val permissionManager = remember { PermissionManager(context) }
-    var setupComplete by remember { mutableStateOf(false) }
+    var setupComplete by remember { mutableStateOf(permissionManager.checkAllPermissions()) }
 
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -111,8 +123,8 @@ fun HomeScreen(
     LaunchedEffect(authState.status) {
         if (authState.canPersistTranscripts) {
             showUpgradeDialog = false
-            upgradePassword = ""
             upgradeErrorMessage = null
+            SavedTranscriptStateHolder.refreshTranscripts(context)
         }
     }
 
@@ -235,6 +247,28 @@ fun HomeScreen(
                         modifier = Modifier.testTag("app_brand_title")
                     )
                 },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onNavigateToPermissions,
+                        modifier = Modifier.testTag("settings_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings / Setup"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = onNavigateToHistory,
+                        modifier = Modifier.testTag("history_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = "Transcript history"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
@@ -256,22 +290,6 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "ClipScribe",
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.testTag("home_main_title")
-                )
-                Text(
-                    text = "Capture what you just heard.",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.testTag("home_main_subtitle")
-                )
-                Spacer(modifier = Modifier.height(4.dp))
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
@@ -290,22 +308,28 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Privacy Verified",
+                            contentDescription = "Cloud transcription status",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = if (authState.status == AuthStatus.SIGNED_IN_ANONYMOUSLY) {
-                                "On-device • Beta account"
-                            } else {
-                                "On-device • Signing in"
-                            },
+                            text = HomeCopy.cloudStatusBadge(authState.status),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
+                Text(
+                    text = "Audio is sent to the cloud for transcription. Do not capture private or sensitive audio.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .testTag("cloud_privacy_warning")
+                )
             }
 
             if (isDevModeEnabled) {
@@ -354,7 +378,7 @@ fun HomeScreen(
                                 val shortUid = authState.uid?.takeLast(6) ?: "ready"
                                 Triple("Anonymous $shortUid", MaterialTheme.colorScheme.primary, true)
                             }
-                            AuthStatus.SIGNED_IN_EMAIL -> {
+                            AuthStatus.SIGNED_IN_ACCOUNT -> {
                                 val emailLabel = authState.email?.take(20) ?: "Signed in"
                                 Triple(emailLabel, MaterialTheme.colorScheme.primary, true)
                             }
@@ -897,39 +921,27 @@ fun HomeScreen(
                     }
                 }
             } else {
-                // Main User-Facing MVP view
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("user_mvp_card"),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (!setupComplete) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        } else if (captureModeState == CaptureModeState.ACTIVE) {
-                            Color(0xFF10B981).copy(alpha = 0.08f) // soft emerald active background
-                        } else {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) // calm blue/indigo ready container
-                        }
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 1.dp,
-                        color = if (!setupComplete) {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        } else if (captureModeState == CaptureModeState.ACTIVE) {
-                            Color(0xFF10B981).copy(alpha = 0.3f)
-                        } else {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        }
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                if (!setupComplete) {
+                    // Main User-Facing Setup Incomplete Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("user_mvp_card"),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        ),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
-                        if (!setupComplete) {
+                        Column(
+                            modifier = Modifier.padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
                             // Setup Incomplete State Illustration
                             Box(
                                 modifier = Modifier
@@ -960,7 +972,7 @@ fun HomeScreen(
                             )
 
                             Text(
-                                text = "Your audio stays on your phone.",
+                                text = "Audio is processed in the cloud. Avoid sensitive audio.",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -977,227 +989,116 @@ fun HomeScreen(
                             ) {
                                 Text(text = "Complete setup", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
-                        } else {
-                            val isCaptureActive = captureModeState == CaptureModeState.ACTIVE
-                            
-                            // Active or Ready state illustration
-                            if (isCaptureActive) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .background(
-                                            color = Color(0xFF10B981).copy(alpha = 0.15f),
-                                            shape = androidx.compose.foundation.shape.CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("🟢", fontSize = 36.sp)
-                                }
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                            shape = androidx.compose.foundation.shape.CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("🎙️", fontSize = 36.sp)
-                                }
-                            }
+                        }
+                    }
+                } else {
+                    // Setup is complete! Show the large on-brand logo button
+                    val isCaptureActive = captureModeState == CaptureModeState.ACTIVE
 
-                            Text(
-                                text = if (isCaptureActive) "Capture mode active" else "Ready",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isCaptureActive) Color(0xFF0F766E) else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.testTag("user_status_text")
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val scale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.94f else 1.0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "scale"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(220.dp)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .shadow(
+                                elevation = if (isCaptureActive) 16.dp else 8.dp,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(48.dp),
+                                clip = false
                             )
-
-                            Text(
-                                text = if (isCaptureActive) {
-                                    "Open another app and tap the floating bubble when you hear something useful."
-                                } else {
-                                    "Start capture mode before opening a lecture, video, or podcast."
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag("user_help_text")
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(48.dp))
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = if (isCaptureActive) {
+                                        listOf(Color(0xFF10B981), Color(0xFF059669)) // emerald green active gradient
+                                    } else {
+                                        listOf(Color(0xFF5B2D8E), Color(0xFF7C3AED)) // brand purple gradient
+                                    }
+                                )
                             )
-
-                            if (engineMode == TranscriptionEngineMode.REMOTE_ENDPOINT) {
-                                freeTierUsage.dailyRemaining?.let { remaining ->
-                                    Text(
-                                        text = if (remaining == 1) {
-                                            "1 free capture left today"
-                                        } else {
-                                            "$remaining free captures left today"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.testTag("free_uses_remaining_text")
-                                    )
-                                }
-                            }
-
-                            if (!authState.canPersistTranscripts) {
-                                TextButton(
-                                    onClick = {
-                                        upgradeErrorMessage = null
-                                        showUpgradeDialog = true
-                                    },
-                                    modifier = Modifier.testTag("create_account_to_save_button")
-                                ) {
-                                    Text(
-                                        text = "Create account to save transcripts",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            if (isCaptureActive) {
-                                Button(
-                                    onClick = {
+                            .border(
+                                width = 2.dp,
+                                color = if (isCaptureActive) Color(0xFF34D399).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.35f),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(48.dp)
+                            )
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null // Custom press scaling, no circular material ripple needed
+                            ) {
+                                try {
+                                    if (isCaptureActive) {
                                         CaptureModeController.stopCaptureMode(context)
                                         coroutineScope.launch {
                                             Toast.makeText(context, "Capture mode stopped.", Toast.LENGTH_SHORT).show()
                                             snackbarHostState.showSnackbar("Capture mode stopped.")
                                         }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .testTag("stop_capture_mode_button"),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                    ),
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                                ) {
-                                    Text(text = "Stop Capture Mode", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                }
-                            } else {
-                                Button(
-                                    onClick = {
-                                        try {
-                                            CaptureModeStateHolder.markStarting()
-                                            val intent = mediaProjectionPermissionHelper.createCaptureIntent()
-                                            mediaProjectionLauncher.launch(intent)
-                                        } catch (e: Exception) {
-                                            CaptureModeStateHolder.markError()
-                                            coroutineScope.launch {
-                                                Toast.makeText(context, "Error starting capture: ${e.message}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .testTag("start_capture_mode_button"),
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                                ) {
-                                    Text(text = "Start Capture Mode", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!isDevModeEnabled && authState.canPersistTranscripts) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("saved_transcripts_card"),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Saved transcripts",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Text(
-                            text = authState.email ?: "Signed-in account",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        if (savedTranscripts.isEmpty()) {
-                            Text(
-                                text = "Saved transcripts will appear here after you save one from the transcript sheet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            savedTranscripts.take(3).forEach { transcript ->
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Text(
-                                            text = "${transcript.durationSeconds}s buffer",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = transcript.text,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                    } else {
+                                        CaptureModeStateHolder.markStarting()
+                                        val intent = mediaProjectionPermissionHelper.createCaptureIntent()
+                                        mediaProjectionLauncher.launch(intent)
+                                    }
+                                } catch (e: Exception) {
+                                    CaptureModeStateHolder.markError()
+                                    coroutineScope.launch {
+                                        Toast.makeText(context, "Error starting capture: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
+                            .testTag("big_capture_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = com.example.R.drawable.ic_cs_bubble),
+                            contentDescription = if (isCaptureActive) "Capture active - Tap to stop" else "Ready - Tap to start capture",
+                            tint = Color.White,
+                            modifier = Modifier.size(110.dp)
+                        )
+                    }
 
-                            if (savedTranscripts.size > 3) {
-                                Text(
-                                    text = "${savedTranscripts.size - 3} more saved transcript(s) stored on this device.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                    if (engineMode == TranscriptionEngineMode.REMOTE_ENDPOINT) {
+                        freeTierUsage.dailyRemaining?.let { remaining ->
+                            Text(
+                                text = if (remaining == 1) {
+                                    "1 free capture left today"
+                                } else {
+                                    "$remaining free captures left today"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("free_uses_remaining_text")
+                            )
+                        }
+                    }
+
+                    if (!authState.canPersistTranscripts) {
+                        TextButton(
+                            onClick = {
+                                upgradeErrorMessage = null
+                                showUpgradeDialog = true
+                            },
+                            modifier = Modifier.testTag("create_account_to_save_button")
+                        ) {
+                            Text(
+                                text = "Sign in with Google to save transcripts",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Developer Mode switch right at the bottom
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Developer Mode",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Switch(
-                    checked = isDevModeEnabled,
-                    onCheckedChange = { DeveloperModeStateHolder.setDeveloperModeEnabled(it) },
-                    modifier = Modifier.testTag("developer_mode_toggle")
-                )
             }
         }
     }
@@ -1216,7 +1117,8 @@ fun HomeScreen(
                 when (
                     SavedTranscriptStateHolder.saveTranscript(
                         text = transcriptResultState.text,
-                        sourceDurationSeconds = transcriptResultState.sourceDurationSeconds
+                        sourceDurationSeconds = transcriptResultState.sourceDurationSeconds,
+                        context = context
                     )
                 ) {
                     SaveTranscriptResult.SUCCESS -> {
@@ -1231,37 +1133,32 @@ fun HomeScreen(
                         Toast.makeText(context, "No transcript available to save.", Toast.LENGTH_SHORT).show()
                         snackbarHostState.showSnackbar("No transcript available to save.")
                     }
+                    SaveTranscriptResult.NETWORK_ERROR -> {
+                        Toast.makeText(context, "Could not save transcript. Check your connection and try again.", Toast.LENGTH_LONG).show()
+                        snackbarHostState.showSnackbar("Could not save transcript. Check your connection and try again.")
+                    }
                 }
             }
         },
         saveActionLabel = if (authState.canPersistTranscripts) {
             "Save transcript"
         } else {
-            "Create account to save"
+            "Sign in to save"
         }
     )
 
     if (showUpgradeDialog) {
-        EmailAccountUpgradeDialog(
-            email = upgradeEmail,
-            password = upgradePassword,
+        GoogleAccountSignInDialog(
             errorMessage = upgradeErrorMessage,
             isSubmitting = authState.status == AuthStatus.UPGRADING_ACCOUNT,
-            onEmailChange = { upgradeEmail = it },
-            onPasswordChange = { upgradePassword = it },
             onConfirm = {
-                FirebaseAuthStateHolder.upgradeAnonymousAccount(
-                    context = context,
-                    email = upgradeEmail,
-                    password = upgradePassword
-                ) { result, message ->
+                coroutineScope.launch {
+                    val (result, message) = FirebaseAuthStateHolder.signInWithGoogleAccount(context)
                     when (result) {
                         AccountUpgradeResult.SUCCESS -> {
                             upgradeErrorMessage = null
-                            coroutineScope.launch {
-                                Toast.makeText(context, "Account ready. You can now save transcripts.", Toast.LENGTH_SHORT).show()
-                                snackbarHostState.showSnackbar("Account ready. You can now save transcripts.")
-                            }
+                            Toast.makeText(context, "Account ready. You can now save transcripts.", Toast.LENGTH_SHORT).show()
+                            snackbarHostState.showSnackbar("Account ready. You can now save transcripts.")
                         }
                         AccountUpgradeResult.INVALID_INPUT -> {
                             upgradeErrorMessage = message

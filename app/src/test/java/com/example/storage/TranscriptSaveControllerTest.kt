@@ -32,12 +32,12 @@ class TranscriptSaveControllerTest {
     }
 
     @Test
-    fun `email account can save transcript`() = runTest {
+    fun `signed in account can save transcript`() = runTest {
         val controller = TranscriptSaveController(
             repository = TranscriptRepository(LocalTranscriptStore()),
             authStateProvider = {
                 AuthState(
-                    status = AuthStatus.SIGNED_IN_EMAIL,
+                    status = AuthStatus.SIGNED_IN_ACCOUNT,
                     uid = "real-user",
                     email = "person@example.com",
                     isAnonymous = false

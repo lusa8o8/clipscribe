@@ -20,6 +20,10 @@ class LocalTranscriptStore {
         _transcripts.value = _transcripts.value.filter { it.id != id }
     }
 
+    fun replaceAll(transcripts: List<TranscriptEntity>) {
+        _transcripts.value = transcripts.take(10)
+    }
+
     fun clearAll() {
         _transcripts.value = emptyList()
     }

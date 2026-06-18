@@ -9,7 +9,7 @@ data class AuthState(
     val errorMessage: String? = null
 ) {
     val canPersistTranscripts: Boolean
-        get() = status == AuthStatus.SIGNED_IN_EMAIL
+        get() = status == AuthStatus.SIGNED_IN_ACCOUNT
 }
 
 enum class AuthStatus {
@@ -17,6 +17,6 @@ enum class AuthStatus {
     SIGNING_IN,
     UPGRADING_ACCOUNT,
     SIGNED_IN_ANONYMOUSLY,
-    SIGNED_IN_EMAIL,
+    SIGNED_IN_ACCOUNT,
     ERROR
 }

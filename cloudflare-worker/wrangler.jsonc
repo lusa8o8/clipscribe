@@ -6,12 +6,25 @@
   "vars": {
     "FIREBASE_PROJECT_ID": "clipscribe-e3668",
     "FREE_TIER_DAILY_TRANSCRIPT_LIMIT": "5",
-    "TRANSCRIPTION_PROVIDER": "mock",
+    "TRANSCRIPTION_PROVIDER": "cloudflare-binding",
     "MOCK_TRANSCRIPTION_TEXT": "[MOCK] Cloud transcript ready.",
     "TRANSCRIPTION_MODEL": "@cf/openai/whisper-large-v3-turbo",
     "TRANSCRIPTION_LANGUAGE": "en"
   },
   "ai": {
     "binding": "AI"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "USAGE_KV",
+      "id": "1c2fd1880d8a4774bb0d016fbc920827"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "TRANSCRIPTS_DB",
+      "database_name": "clipscribe_transcripts",
+      "database_id": "54b7ec91-d5ac-4da4-ad1e-d7474bf7c3f1"
+    }
+  ]
 }

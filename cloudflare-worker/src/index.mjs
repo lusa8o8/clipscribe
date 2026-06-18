@@ -21,6 +21,16 @@ function serverError(message) {
   return new Response(message, { status: 502 });
 }
 
+function jsonResponse(value, init = {}) {
+  return new Response(JSON.stringify(value), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...(init.headers || {})
+    }
+  });
+}
+
 const FIREBASE_CERTS_URL =
   "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 
@@ -276,6 +286,46 @@ async function verifyFirebaseIdToken(idToken, env) {
   return payload;
 }
 
+async function verifyBearerTokenRequest(request, env) {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return {
+      ok: false,
+      response: unauthorized("Missing bearer token.")
+    };
+  }
+  const idToken = authorization.slice("Bearer ".length).trim();
+  if (!idToken) {
+    return {
+      ok: false,
+      response: unauthorized("Missing bearer token.")
+    };
+  }
+
+  try {
+    const verifier = env.__verifyFirebaseIdToken || verifyFirebaseIdToken;
+    const payload = await verifier(idToken, env);
+    const uid = payload?.sub || payload?.uid;
+    if (typeof uid !== "string" || uid.length === 0) {
+      return {
+        ok: false,
+        response: unauthorized("Firebase ID token subject is missing.")
+      };
+    }
+    return {
+      ok: true,
+      payload,
+      uid
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Firebase ID token verification failed.";
+    return {
+      ok: false,
+      response: unauthorized(message)
+    };
+  }
+}
+
 function getFreeTierDailyTranscriptLimit(env) {
   const rawLimit = env.FREE_TIER_DAILY_TRANSCRIPT_LIMIT;
   const parsedLimit = Number.parseInt(rawLimit ?? "", 10);
@@ -438,29 +488,16 @@ export async function handleTranscribeRequest(request, env) {
     return new Response("Method not allowed.", { status: 405 });
   }
 
-  const authorization = request.headers.get("Authorization");
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return unauthorized("Missing bearer token.");
-  }
-  const idToken = authorization.slice("Bearer ".length).trim();
-  if (!idToken) {
-    return unauthorized("Missing bearer token.");
+  const authResult = await verifyBearerTokenRequest(request, env);
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
-  let firebaseTokenPayload;
-  try {
-    const verifier = env.__verifyFirebaseIdToken || verifyFirebaseIdToken;
-    firebaseTokenPayload = await verifier(idToken, env);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Firebase ID token verification failed.";
-    return unauthorized(message);
-  }
-
-  const usageUid = firebaseTokenPayload?.sub;
+  const usageUid = authResult.uid;
   const usageState = await enforceDailyTranscriptLimit(env, usageUid);
   if (!usageState.allowed) {
     return tooManyRequests(
-      "Free transcript limit reached for today. Sign in later or upgrade when saved transcripts are available.",
+      "Free transcript limit reached for today. Try again tomorrow.",
       buildQuotaHeaders(usageState.limit, usageState.usage.count)
     );
   }
@@ -494,12 +531,260 @@ export async function handleTranscribeRequest(request, env) {
   }
 }
 
+function getTranscriptDb(env) {
+  return env.TRANSCRIPTS_DB || env.__transcriptsDb || null;
+}
+
+function normalizeTranscriptRow(row) {
+  return {
+    id: String(row.id),
+    text: String(row.text || ""),
+    sourceDurationSeconds: Number(row.source_duration_seconds || 0),
+    createdAt: String(row.created_at || "")
+  };
+}
+
+async function parseTranscriptBody(request) {
+  try {
+    return await request.json();
+  } catch {
+    throw new Error("Expected JSON body.");
+  }
+}
+
+async function handleCreateTranscriptRequest(request, env, uid) {
+  const db = getTranscriptDb(env);
+  if (!db || typeof db.prepare !== "function") {
+    return serverError("Transcript database is not configured.");
+  }
+
+  let body;
+  try {
+    body = await parseTranscriptBody(request);
+  } catch (error) {
+    return badRequest(error.message);
+  }
+
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+  if (!text) {
+    return badRequest("Transcript text is required.");
+  }
+
+  const sourceDurationSeconds = Number.isFinite(body.sourceDurationSeconds)
+    ? Math.max(1, Math.round(body.sourceDurationSeconds))
+    : 1;
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+
+  await db
+    .prepare(
+      `INSERT INTO transcripts (id, uid, text, source_duration_seconds, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .bind(id, uid, text, sourceDurationSeconds, createdAt)
+    .run();
+
+  return jsonResponse(
+    {
+      transcript: {
+        id,
+        text,
+        sourceDurationSeconds,
+        createdAt
+      }
+    },
+    { status: 201 }
+  );
+}
+
+async function handleListTranscriptsRequest(env, uid) {
+  const db = getTranscriptDb(env);
+  if (!db || typeof db.prepare !== "function") {
+    return serverError("Transcript database is not configured.");
+  }
+
+  const result = await db
+    .prepare(
+      `SELECT id, text, source_duration_seconds, created_at
+       FROM transcripts
+       WHERE uid = ?
+       ORDER BY created_at DESC
+       LIMIT 50`
+    )
+    .bind(uid)
+    .all();
+
+  return jsonResponse({
+    transcripts: (result.results || []).map(normalizeTranscriptRow)
+  });
+}
+
+async function handleDeleteTranscriptRequest(env, uid, transcriptId) {
+  const db = getTranscriptDb(env);
+  if (!db || typeof db.prepare !== "function") {
+    return serverError("Transcript database is not configured.");
+  }
+
+  if (!transcriptId) {
+    return badRequest("Transcript ID is required.");
+  }
+
+  await db
+    .prepare("DELETE FROM transcripts WHERE uid = ? AND id = ?")
+    .bind(uid, transcriptId)
+    .run();
+
+  return new Response(null, { status: 204 });
+}
+
+export async function handleTranscriptPersistenceRequest(request, env, transcriptId = null) {
+  const authResult = await verifyBearerTokenRequest(request, env);
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  if (request.method === "POST" && transcriptId == null) {
+    return handleCreateTranscriptRequest(request, env, authResult.uid);
+  }
+
+  if (request.method === "GET" && transcriptId == null) {
+    return handleListTranscriptsRequest(env, authResult.uid);
+  }
+
+  if (request.method === "DELETE" && transcriptId != null) {
+    return handleDeleteTranscriptRequest(env, authResult.uid, transcriptId);
+  }
+
+  return new Response("Method not allowed.", { status: 405 });
+}
+
+export async function handleWaitlistRequest(request, env) {
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
+  if (request.method !== "POST") {
+    return new Response("Method not allowed.", {
+      status: 405,
+      headers: corsHeaders,
+    });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Expected JSON body." }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const platform = typeof body.platform === "string" ? body.platform.trim().toLowerCase() : "";
+
+  if (!email || !email.includes("@")) {
+    return new Response(JSON.stringify({ error: "A valid email is required." }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  if (platform !== "android" && platform !== "ios" && platform !== "other") {
+    return new Response(JSON.stringify({ error: "Platform must be 'android', 'ios', or 'other'." }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  const db = getTranscriptDb(env);
+  if (!db || typeof db.prepare !== "function") {
+    return new Response(JSON.stringify({ error: "Database not configured." }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  try {
+    const createdAt = new Date().toISOString();
+    await db
+      .prepare(
+        `INSERT INTO waitlist (email, platform, created_at)
+         VALUES (?, ?, ?)`
+      )
+      .bind(email, platform, createdAt)
+      .run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 201,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("UNIQUE constraint failed")) {
+      return new Response(JSON.stringify({ success: true, message: "You are already on the waitlist!" }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+    return new Response(JSON.stringify({ error: "Failed to join waitlist. Please try again later." }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/waitlist") {
+      return handleWaitlistRequest(request, env);
+    }
     if (url.pathname === "/transcribe") {
       return handleTranscribeRequest(request, env);
+    }
+    if (url.pathname === "/transcripts") {
+      return handleTranscriptPersistenceRequest(request, env);
+    }
+    const transcriptMatch = url.pathname.match(/^\/transcripts\/([^/]+)$/);
+    if (transcriptMatch) {
+      return handleTranscriptPersistenceRequest(
+        request,
+        env,
+        decodeURIComponent(transcriptMatch[1])
+      );
     }
     return new Response("Not found.", { status: 404 });
   }
 };
+

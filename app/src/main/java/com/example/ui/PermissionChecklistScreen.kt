@@ -106,7 +106,7 @@ fun PermissionChecklistScreen(
             )
         ) {
             Text(
-                text = "V1 is local-first. No account, no backend, no cloud transcription.",
+                text = "ClipScribe sends captured audio to the cloud for transcription. Do not use it for private or sensitive audio.",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,

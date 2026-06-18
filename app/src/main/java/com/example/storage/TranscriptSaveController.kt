@@ -7,7 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 enum class SaveTranscriptResult {
     SUCCESS,
     AUTH_REQUIRED,
-    EMPTY_TRANSCRIPT
+    EMPTY_TRANSCRIPT,
+    NETWORK_ERROR
 }
 
 class TranscriptSaveController(

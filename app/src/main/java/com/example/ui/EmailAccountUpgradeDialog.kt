@@ -9,25 +9,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
 @Composable
-fun EmailAccountUpgradeDialog(
-    email: String,
-    password: String,
+fun GoogleAccountSignInDialog(
     errorMessage: String?,
     isSubmitting: Boolean,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -47,39 +41,16 @@ fun EmailAccountUpgradeDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Create account to save transcripts",
+                    text = "Sign in to save transcripts",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    text = "Anonymous use stays free and temporary. Add an email account when you want saved transcript history.",
+                    text = "Anonymous use stays free and temporary. Continue with Google when you want saved transcript history.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    label = { Text("Email") },
-                    singleLine = true,
-                    enabled = !isSubmitting,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("email_upgrade_email_input")
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = onPasswordChange,
-                    label = { Text("Password") },
-                    singleLine = true,
-                    enabled = !isSubmitting,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("email_upgrade_password_input")
                 )
 
                 if (!errorMessage.isNullOrBlank()) {
@@ -98,7 +69,7 @@ fun EmailAccountUpgradeDialog(
                         .height(48.dp)
                         .testTag("email_upgrade_confirm_button")
                 ) {
-                    Text(if (isSubmitting) "Connecting..." else "Continue")
+                    Text(if (isSubmitting) "Connecting..." else "Continue with Google")
                 }
 
                 TextButton(

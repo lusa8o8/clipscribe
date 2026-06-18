@@ -1,11 +1,15 @@
 package com.example.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,25 +34,38 @@ fun WelcomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(36.dp))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF5B2D8E),
+                                Color(0xFF7C3AED)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = com.example.R.drawable.ic_cs_bubble),
+                    contentDescription = "ClipScribe Logo",
+                    tint = Color.White,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+
             Text(
-                text = Constants.APP_NAME,
-                style = MaterialTheme.typography.displayMedium,
+                text = "Capture what you just heard.",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("app_title")
+                modifier = Modifier.padding(horizontal = 16.dp).testTag("welcome_tagline")
             )
 
-            Text(
-                text = "Capture recent internal system audio instantly with sound loop recording. Keep past ${Constants.DEFAULT_BUFFER_SECONDS}s of sound rolling and parse it to text.",
-                style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 24.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = onNavigateNext,

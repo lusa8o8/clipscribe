@@ -1,5 +1,6 @@
 package com.example.overlay
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -13,11 +14,14 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.example.MainActivity
+import com.example.R
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +52,10 @@ class FloatingBubbleView(
 
     private var currentBubbleState: BubbleState = BubbleState.IDLE
 
+    private lateinit var logoImageView: ImageView
+    private lateinit var ringImageView: ImageView
+    private var rotationAnimator: ObjectAnimator? = null
+
     private fun updateBubbleState(state: BubbleState) {
         currentBubbleState = state
         handler.post {
@@ -55,28 +63,39 @@ class FloatingBubbleView(
                 shape = GradientDrawable.OVAL
                 setStroke((2 * density).toInt(), Color.WHITE)
             }
-            val textView = bubbleCircle.getChildAt(0) as? TextView
 
             when (state) {
                 BubbleState.IDLE -> {
                     bg.setColor(0xFF2C3E50.toInt()) // Slate Primary
-                    textView?.text = "🎙️"
+                    ringImageView.visibility = View.GONE
+                    rotationAnimator?.cancel()
                 }
                 BubbleState.PRESSED -> {
                     bg.setColor(0xFF1A252F.toInt()) // Dark slate
-                    textView?.text = "🎙️"
+                    ringImageView.visibility = View.GONE
+                    rotationAnimator?.cancel()
                 }
                 BubbleState.PROCESSING -> {
                     bg.setColor(0xFF3498DB.toInt()) // Soft Blue
-                    textView?.text = "⏳"
+                    ringImageView.visibility = View.VISIBLE
+                    if (rotationAnimator?.isRunning != true) {
+                        rotationAnimator = ObjectAnimator.ofFloat(ringImageView, View.ROTATION, 0f, 360f).apply {
+                            duration = 900
+                            repeatCount = ObjectAnimator.INFINITE
+                            interpolator = LinearInterpolator()
+                            start()
+                        }
+                    }
                 }
                 BubbleState.SUCCESS -> {
                     bg.setColor(0xFF2ECC71.toInt()) // Green
-                    textView?.text = "✅"
+                    ringImageView.visibility = View.GONE
+                    rotationAnimator?.cancel()
                 }
                 BubbleState.ERROR -> {
                     bg.setColor(0xFFE74C3C.toInt()) // Elegant Red
-                    textView?.text = "❌"
+                    ringImageView.visibility = View.GONE
+                    rotationAnimator?.cancel()
                 }
             }
             bubbleCircle.background = bg
@@ -102,6 +121,20 @@ class FloatingBubbleView(
         // Configure itself to allow drawing translucent backgrounds
         setBackgroundColor(Color.TRANSPARENT)
 
+        // Spinning ring overlay (PROCESSING state only)
+        ringImageView = ImageView(context).apply {
+            setImageResource(R.drawable.ic_processing_ring)
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            visibility = View.GONE
+        }
+
+        // Waveform logo icon (always visible)
+        val logoPx = (28 * density).toInt()
+        logoImageView = ImageView(context).apply {
+            setImageResource(R.drawable.ic_cs_bubble)
+            layoutParams = LayoutParams(logoPx, logoPx, Gravity.CENTER)
+        }
+
         // Circle subview
         bubbleCircle = FrameLayout(context).apply {
             val bg = GradientDrawable().apply {
@@ -112,12 +145,8 @@ class FloatingBubbleView(
             background = bg
             elevation = 6 * density
 
-            addView(TextView(context).apply {
-                text = "🎙️"
-                textSize = 24f
-                gravity = Gravity.CENTER
-                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-            })
+            addView(ringImageView)
+            addView(logoImageView)
         }
 
         // Horizontal pill menu subview
