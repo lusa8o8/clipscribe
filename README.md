@@ -7,17 +7,17 @@
   <a href="https://github.com/lusa8o8/clipscribe/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/lusa8o8/clipscribe?color=7c3aed&label=latest&style=flat-square"></a>
   <a href="https://github.com/lusa8o8/clipscribe/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-7c3aed?style=flat-square"></a>
   <a href="https://github.com/lusa8o8/clipscribe/issues"><img alt="Issues" src="https://img.shields.io/github/issues/lusa8o8/clipscribe?style=flat-square&color=7c3aed"></a>
-  <a href="https://clipscribe.vercel.app"><img alt="Website" src="https://img.shields.io/badge/website-live-7c3aed?style=flat-square"></a>
+  <a href="https://clipscribe.trymyapp.uk"><img alt="Website" src="https://img.shields.io/badge/website-live-7c3aed?style=flat-square"></a>
 
   <br />
   <br />
 
-  <a href="https://clipscribe.vercel.app/app-debug.apk">
+  <a href="https://clipscribe.trymyapp.uk/app-debug.apk">
     <img alt="Download APK" src="https://img.shields.io/badge/Download%20Beta%20APK-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" />
   </a>
   &nbsp;
-  <a href="https://clipscribe.vercel.app">
-    <img alt="Landing Page" src="https://img.shields.io/badge/Landing%20Page-clipscribe.vercel.app-7c3aed?style=for-the-badge" />
+  <a href="https://clipscribe.trymyapp.uk">
+    <img alt="Landing Page" src="https://img.shields.io/badge/Landing%20Page-clipscribe.trymyapp.uk-7c3aed?style=for-the-badge" />
   </a>
 </div>
 
@@ -64,7 +64,7 @@ Open any app  →  Hear something important  →  Tap the bubble  →  Transcrip
 > ⚠️ This is a pre-Play Store beta. You will need to allow installation from unknown sources.
 
 **Option 1 — Direct APK download:**
-1. Visit [clipscribe.vercel.app](https://clipscribe.vercel.app) on your Android phone
+1. Visit [clipscribe.trymyapp.uk](https://clipscribe.trymyapp.uk) on your Android phone
 2. Tap **Download Beta APK**
 3. Open the downloaded file and tap **Install**
 4. Grant audio capture permissions when prompted
@@ -163,7 +163,7 @@ The landing page lives in `website/` and is deployed to Vercel.
 - Raw audio is **never stored** on our servers
 - Android's MediaProjection permission triggers the system recording notification — this is expected behaviour, not a bug
 
-Full details: [clipscribe.vercel.app/privacy](https://clipscribe.vercel.app/privacy)
+Full details: [clipscribe.trymyapp.uk/privacy](https://clipscribe.trymyapp.uk/privacy)
 
 ---
 
@@ -175,7 +175,7 @@ Full details: [clipscribe.vercel.app/privacy](https://clipscribe.vercel.app/priv
 | Monthly Pro | $1.99 / month | Unlimited |
 | Annual Pro | $9.99 / year | Unlimited + best value |
 
-Join the waitlist at [clipscribe.vercel.app](https://clipscribe.vercel.app).
+Join the waitlist at [clipscribe.trymyapp.uk](https://clipscribe.trymyapp.uk).
 
 ---
 
