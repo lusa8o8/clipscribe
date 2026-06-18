@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -222,6 +223,19 @@ fun PermissionChecklistScreen(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            TextButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:lusa@trymyapp.uk")
+                        putExtra(Intent.EXTRA_SUBJECT, "ClipScribe Beta Feedback")
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Contact Support", color = MaterialTheme.colorScheme.primary)
             }
         }
     }
