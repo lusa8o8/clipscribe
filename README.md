@@ -181,7 +181,7 @@ Join the waitlist at [clipscribe.vercel.app](https://clipscribe.vercel.app).
 
 ## Contributing
 
-ClipScribe is early-stage and feedback-driven. If you run into a bug, want a feature, or have ideas:
+ClipScribe is early-stage and feedback-driven. If you run into a bug, want a feature, or have ideas, email me at lusa@trymyapp.uk or:
 
 1. [Open an issue](https://github.com/lusa8o8/clipscribe/issues)
 2. Fork the repo, make your change, and open a PR
