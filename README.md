@@ -1,226 +1,193 @@
-# ClipScribe
+<div align="center">
+  <img src="website/images/logo.png" alt="ClipScribe Logo" width="100" height="100" />
+  <h1>ClipScribe</h1>
+  <p><strong>Capture what you just heard.</strong></p>
+  <p>Retroactive audio transcription for Android — never pause a video to write a note again.</p>
 
-ClipScribe is an Android MVP for capturing the last chunk of playback audio from another app, then turning it into a transcript with a floating bubble workflow.
+  <a href="https://github.com/lusa8o8/clipscribe/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/lusa8o8/clipscribe?color=7c3aed&label=latest&style=flat-square"></a>
+  <a href="https://github.com/lusa8o8/clipscribe/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-7c3aed?style=flat-square"></a>
+  <a href="https://github.com/lusa8o8/clipscribe/issues"><img alt="Issues" src="https://img.shields.io/github/issues/lusa8o8/clipscribe?style=flat-square&color=7c3aed"></a>
+  <a href="https://clipscribe.vercel.app"><img alt="Website" src="https://img.shields.io/badge/website-live-7c3aed?style=flat-square"></a>
 
-Launch privacy posture:
+  <br />
+  <br />
 
-- ClipScribe sends captured audio clips to a cloud transcription endpoint.
-- Users should not use the MVP for private, confidential, regulated, or sensitive audio.
-- Saved transcript history is only available after sign-in and is still part of the MVP launch work.
-- The native on-device Whisper path is not production-ready in this build.
+  <a href="https://clipscribe.vercel.app/app-debug.apk">
+    <img alt="Download APK" src="https://img.shields.io/badge/Download%20Beta%20APK-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+  &nbsp;
+  <a href="https://clipscribe.vercel.app">
+    <img alt="Landing Page" src="https://img.shields.io/badge/Landing%20Page-clipscribe.vercel.app-7c3aed?style=for-the-badge" />
+  </a>
+</div>
 
-Current status:
+---
 
-- Floating bubble capture flow works on-device
-- MediaProjection consent and playback capture work
-- Frozen audio preparation works
-- Debug/local transcript flow exists for development
-- Firebase auth is wired in for beta identity
-- Cloud transcription works end-to-end through Cloudflare Workers AI
+## The Problem
 
-## Current product flow
+Every time you hear something important in a YouTube clip, TikTok short, lecture, or podcast, you have to:
 
-1. Open ClipScribe
-2. Tap `Start Capture Mode`
-3. Approve screen/audio capture for the current session
-4. Open YouTube, Spotify, a lecture, or another supported source
-5. Tap the floating bubble when you hear something worth saving
-6. ClipScribe freezes the rolling buffer, prepares audio, uploads the clip for cloud transcription, and shows a transcript result
+1. Pause the video
+2. Open a notes app
+3. Manually type it out
+4. Switch back
 
-## Local build
+Then if you want to pass it to an LLM, you type it again.
 
-This repo can be built from the command line. Android Studio is not required.
+**ClipScribe eliminates all of that.**
 
-Prerequisites:
+---
 
-- Android SDK installed locally
-- A JDK available locally
-- `adb` available through the Android SDK
-- A connected Android device with USB debugging enabled
+## How It Works
 
-Useful scripts:
+ClipScribe runs a silent 60-second audio loop in the background. When you hear something worth saving, you tap the floating bubble overlay — without leaving your current app. ClipScribe instantly grabs the last 60 seconds of system audio, transcribes it via Whisper AI, and saves it to your history. Ready to copy, share, or paste into ChatGPT.
 
-- `.\scripts\build-debug.ps1`
-- `.\scripts\install-debug.ps1`
-- `.\scripts\logcat-clipscribe.ps1`
-- `.\scripts\pull-app-debug-log.ps1`
-- `.\scripts\test-android-integration.ps1`
-- `.\scripts\test-worker.ps1`
+```
+Open any app  →  Hear something important  →  Tap the bubble  →  Transcript ready
+```
 
-Build and install:
+---
 
+## Features
+
+- 🎙️ **Retroactive capture** — grabs the last 60 seconds, no manual recording required
+- 🫧 **Floating bubble overlay** — one tap without leaving your active app
+- 🤖 **Whisper AI transcription** — powered by `@cf/openai/whisper-large-v3-turbo` on Cloudflare Workers AI
+- 🔒 **Private by design** — audio is processed ephemerally and never stored on our servers
+- 📋 **Transcript history** — saved locally and synced to the cloud when signed in
+- 🌐 **Firebase auth** — anonymous use or Google sign-in for cross-device history
+
+---
+
+## Installation (Android Beta)
+
+> ⚠️ This is a pre-Play Store beta. You will need to allow installation from unknown sources.
+
+**Option 1 — Direct APK download:**
+1. Visit [clipscribe.vercel.app](https://clipscribe.vercel.app) on your Android phone
+2. Tap **Download Beta APK**
+3. Open the downloaded file and tap **Install**
+4. Grant audio capture permissions when prompted
+
+**Option 2 — Build from source:**
 ```powershell
+# Requirements: Android SDK, JDK, adb, USB debugging enabled
+git clone https://github.com/lusa8o8/clipscribe.git
+cd clipscribe
 .\scripts\build-debug.ps1
 .\scripts\install-debug.ps1
 ```
 
-## Firebase setup
+---
 
-Firebase is currently used for beta identity. Anonymous auth is required for basic use; Google sign-in is used when users want saved transcript history.
+## Architecture
 
-Required steps:
-
-1. Create a Firebase project
-2. Add the Android app package `com.aistudio.clipscribe.vfqmza`
-3. Place `google-services.json` at `app/google-services.json`
-4. Enable `Authentication -> Sign-in method -> Anonymous`
-5. Enable `Authentication -> Sign-in method -> Google`
-6. Make sure the Firebase project has a Web client ID in the generated `google-services.json`
-
-Expected app behavior after setup:
-
-- The top badge shows `Cloud transcription - Beta account` for anonymous users
-- The top badge shows `Cloud transcription - Signed in` for Google users
-- In Developer Mode, `Auth` shows the current Firebase user
-- In Developer Mode, `Auth token` eventually shows `Ready`
-
-## User-facing privacy copy
-
-Keep launch copy plain and consistent:
-
-- Audio is sent to the cloud for transcription.
-- Do not capture private or sensitive audio.
-- Saved transcript history is only available for Google signed-in users.
-- Debug/local transcription is not the production path.
-
-## Debugging
-
-Pull the app debug log:
-
-```powershell
-.\scripts\pull-app-debug-log.ps1
+```
+clipscribe/
+├── app/
+│   └── src/main/java/com/example/
+│       ├── capture/          # MediaProjection, rolling audio buffer, freeze flow
+│       ├── overlay/          # Floating bubble service and tap handling
+│       ├── transcription/    # Audio prep, Cloudflare Workers AI, result holders
+│       ├── auth/             # Firebase auth state
+│       ├── storage/          # Local + remote transcript store, sync controller
+│       └── ui/               # Compose screens (Home, History, Welcome, Permissions)
+├── cloudflare-worker/
+│   ├── src/index.mjs         # Worker: /transcribe, /transcripts, /waitlist
+│   ├── migrations/           # D1 database schema
+│   └── wrangler.jsonc        # Cloudflare deployment config
+└── website/                  # Vercel landing page
+    ├── index.html            # Marketing page with interactive mockup
+    ├── privacy.html          # Privacy policy
+    └── vercel.json           # Vercel headers + clean URL config
 ```
 
-This writes `clipscribe-debug-device.log` in the repo root.
+---
 
-The app also writes an internal debug log file at:
+## Backend (Cloudflare Worker)
 
-- `files/clipscribe-debug.log`
+The `cloudflare-worker/` directory contains a Cloudflare Worker that handles:
 
-Current debug logging covers:
+| Endpoint | Method | Description |
+|---|---|---|
+| `/transcribe` | `POST` | Transcribes WAV audio via Whisper AI — requires Firebase bearer token |
+| `/transcripts` | `GET` / `POST` | List or create saved transcripts for signed-in users |
+| `/transcripts/:id` | `DELETE` | Delete a specific transcript |
+| `/waitlist` | `POST` | Join the launch waitlist |
 
-- Firebase anonymous auth
-- MediaProjection consent handoff
-- Capture service startup
-- AudioRecord startup
-- MediaProjection shutdown
+**Deploy the worker:**
+```powershell
+cd cloudflare-worker
+npx wrangler d1 migrations apply clipscribe_transcripts --remote
+npx wrangler deploy
+```
 
-## Cloud endpoint
+**Required Cloudflare bindings:**
+- `AI` — Workers AI binding (Whisper)
+- `TRANSCRIPTS_DB` — D1 database
+- `USAGE_KV` — KV namespace for per-user daily quota tracking
 
-This repo includes a direct Cloudflare Worker under `cloudflare-worker/`.
-
-Current contract:
-
-- App sends raw WAV bytes as the request body
-- App sends Firebase ID token as `Authorization: Bearer <token>`
-- Worker verifies the Firebase ID token against Google's Secure Token signing certs
-- Worker returns transcript text as plain text
-- Worker may return `X-ClipScribe-Transcription-Duration-Ms` when available
-- Signed-in transcript persistence uses `POST /transcripts`, `GET /transcripts`, and `DELETE /transcripts/:id`
-- Transcript persistence requires the same Firebase bearer token and stores rows by Firebase `uid`
-
-Current provider modes:
-
-- `mock`: local development and contract testing
-- `cloudflare-binding`: uses a real Workers AI binding exposed as `env.AI`
-
-Recommended Workers AI model:
-
-- `@cf/openai/whisper-large-v3-turbo`
-
-Alternative cheaper / smaller English-only model:
-
-- `@cf/openai/whisper-tiny-en`
-
-The Android app will only use the remote path when `TRANSCRIPTION_ENDPOINT_URL` is set in the environment at build time.
-
-Required worker variables:
-
+**Required environment variables:**
 - `FIREBASE_PROJECT_ID`
-- `FREE_TIER_DAILY_TRANSCRIPT_LIMIT`
-- `TRANSCRIPTION_PROVIDER`
-- `TRANSCRIPTION_MODEL`
-- `TRANSCRIPTION_LANGUAGE` (optional)
+- `TRANSCRIPTION_PROVIDER` = `cloudflare-binding`
+- `TRANSCRIPTION_MODEL` = `@cf/openai/whisper-large-v3-turbo`
+- `FREE_TIER_DAILY_TRANSCRIPT_LIMIT` = `5`
 
-Optional worker bindings:
+---
 
-- `USAGE_KV`: Cloudflare KV namespace used for soft per-user daily transcript counting
+## Firebase Setup
 
-Required transcript persistence binding:
+Firebase is used for identity (anonymous + Google sign-in).
 
-- `TRANSCRIPTS_DB`: Cloudflare D1 database for signed-in saved transcripts
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Add Android app with package `com.aistudio.clipscribe.vfqmza`
+3. Place `google-services.json` at `app/google-services.json`
+4. Enable **Anonymous** and **Google** sign-in methods
 
-Create/apply the D1 schema:
+---
 
-```powershell
-wrangler d1 create clipscribe_transcripts
-wrangler d1 migrations apply clipscribe_transcripts
-```
+## Website (Vercel)
 
-After creating the database, replace `REPLACE_WITH_D1_DATABASE_ID` in `cloudflare-worker/wrangler.jsonc`.
+The landing page lives in `website/` and is deployed to Vercel.
 
-## Focused integration tests
+1. Import the repo at [vercel.com](https://vercel.com)
+2. Set **Root Directory** → `website`
+3. Deploy — no build step needed (pure HTML/CSS/JS)
 
-Instead of running the full test surface for every backend change, use the targeted business-path checks:
+---
 
-```powershell
-.\scripts\test-android-integration.ps1
-.\scripts\test-worker.ps1
-```
+## Privacy
 
-These currently cover:
+- Audio loop processing is **entirely in-memory** on your device
+- The captured audio is sent to Cloudflare Workers AI **only for the duration of the transcription request**
+- Raw audio is **never stored** on our servers
+- Android's MediaProjection permission triggers the system recording notification — this is expected behaviour, not a bug
 
-- prepared audio + Firebase token -> remote request contract
-- remote success response -> transcript mapping
-- auth failure -> user-facing auth error path
-- worker request validation and success/error HTTP behavior
-- Firebase token verification gate at the worker boundary
-- per-user free-tier quota enforcement behavior
-- Workers AI binding payload shape for the supported Whisper models
-- signed-in transcript save/list/delete ownership behavior
+Full details: [clipscribe.vercel.app/privacy](https://clipscribe.vercel.app/privacy)
 
-## Architecture notes
+---
 
-Main pieces in the current MVP:
+## Pricing
 
-- `capture/`: MediaProjection, playback capture, rolling buffer, freeze flow
-- `overlay/`: floating bubble service and tap behavior
-- `transcription/`: prepared audio, cloud transcription flow, debug/local fallback, result holders
-- `auth/`: Firebase auth state
-- `ui/`: Compose screens and diagnostics
+| Plan | Price | Transcriptions |
+|---|---|---|
+| Free Beta | $0 | 5 / day |
+| Monthly Pro | $1.99 / month | Unlimited |
+| Annual Pro | $9.99 / year | Unlimited + best value |
 
-Important current limitation:
+Join the waitlist at [clipscribe.vercel.app](https://clipscribe.vercel.app).
 
-- The native Whisper JNI implementation is still a stub for debug-mode transcript output
-- Anonymous users reset on uninstall or app-data wipe
+---
 
-## Next backend step
+## Contributing
 
-The next planned step is:
+ClipScribe is early-stage and feedback-driven. If you run into a bug, want a feature, or have ideas:
 
-- Provision the Cloudflare D1 database and deploy the Worker with `TRANSCRIPTS_DB`
-- Keep anonymous transcripts ephemeral in the MVP
-- Keep soft usage limits for verified Firebase users
+1. [Open an issue](https://github.com/lusa8o8/clipscribe/issues)
+2. Fork the repo, make your change, and open a PR
 
-Planned provider path:
+---
 
-- Firebase Auth for identity
-- Cloudflare D1 or a small cloud datastore for saved transcripts
-- Cloudflare Workers AI Whisper for free-tier cloud transcription
+## License
 
-## Website & Landing Page (Vercel)
-
-The `website/` directory contains the polished, responsive static landing page, privacy policy, and the downloadable Android package.
-
-### Features
-- **Landing Page (`index.html`):** Marketing copy, interactive CSS phone mockup, pricing tables, waitlist signups, and FAQ.
-- **Privacy Page (`privacy.html`):** Privacy policy for store compliance.
-- **Vercel Config (`vercel.json`):** Configures clean URLs and forces the correct MIME type (`application/vnd.android.package-archive`) and content-disposition headers for `app-debug.apk` to ensure seamless downloads.
-
-### Deployment Steps
-1. Log in to [Vercel](https://vercel.com) and click **Add New > Project**.
-2. Import your GitHub repository (`lusa8o8/clipscribe`).
-3. Under **Project Settings**, set the **Root Directory** to `website`.
-4. Leave the Build Command and Output Directory as default (since it is a static HTML project).
-5. Click **Deploy**. Vercel will build and serve your static landing page, including your compiled APK download link!
-
+MIT © 2026 [Lusa Malungisha](https://github.com/lusa8o8)
